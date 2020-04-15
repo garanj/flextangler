@@ -1,5 +1,5 @@
 # flextangler
-Web-based Flextangle creator
+Web-based [Flextangle](https://en.wikipedia.org/wiki/Kaleidocycle) creator
 
 ## Overview
 
