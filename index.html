@@ -1,0 +1,298 @@
+<html>
+<head>
+</head>
+<body>
+  <div>
+    <canvas id="c" width="1400" height="600" style="display: none;"/>
+  </div>
+  <div>
+    <canvas id="d" width="1400" height="600"/>
+  </div>
+  <div>
+    <div>
+    <input type="file" name="imagePicker1" accept=".jpg, .jpeg, .png" id="imagePicker1" onchange="changeImagePicker1(event);">
+    <input type="checkbox" id="borderCheckbox1" name="borderCheckbox1" onchange="changeCheckboxes();">
+    <label for="imageBorder1">Ensure fit</label>
+  </div>
+  <div>
+    <input type="file" name="imagePicker2" accept=".jpg, .jpeg, .png" id="imagePicker2" onchange="changeImagePicker2(event);">
+    <input type="checkbox" id="borderCheckbox2" name="borderCheckbox2" onchange="changeCheckboxes();">
+    <label for="imageBorder2">Ensure fit</label>
+  </div>
+  <div>
+    <input type="file" name="imagePicker3" accept=".jpg, .jpeg, .png" id="imagePicker3" onchange="changeImagePicker3(event);">
+    <input type="checkbox" id="borderCheckbox3" name="borderCheckbox3" onchange="changeCheckboxes();">
+    <label for="imageBorder3">Ensure fit</label>
+  </div>
+  <div>
+    <input type="file" name="imagePicker4" accept=".jpg, .jpeg, .png" id="imagePicker4" onchange="changeImagePicker4(event);">
+    <input type="checkbox" id="borderCheckbox4" name="borderCheckbox4" onchange="changeCheckboxes();">
+    <label for="imageBorder4">Ensure fit</label>
+  </div>
+  <div>
+    <canvas id="a1" width="600" height="600" style="display: none;"/>
+  </div>
+  <div>
+    <canvas id="a2" width="600" height="600" style="display: none;"/>
+  </div>
+  <div>
+    <canvas id="a3" width="600" height="600" style="display: none;"/>
+  </div>
+  <div>
+    <canvas id="a4" width="600" height="600" style="display: none;"/>
+  </div>
+</body>
+<script>
+const COS_30 = Math.cos(Math.PI / 6);
+const ISOCELES_FACTOR = 2 / Math.sqrt(5);
+
+const EDGE_LEN = 200;
+
+const canvas = document.getElementById('c');
+canvas.width = 6 * EDGE_LEN * COS_30 + EDGE_LEN / 4;
+canvas.height = 3 * EDGE_LEN;
+
+const scaledCanvas = document.getElementById('d');
+scaledCanvas.width = canvas.width;
+scaledCanvas.height = canvas.height;
+
+const image1 = document.getElementById('a1');
+const image2 = document.getElementById('a2');
+const image3 = document.getElementById('a3');
+const image4 = document.getElementById('a4');
+
+let checked = [
+  document.getElementById('borderCheckbox1').checked,
+  document.getElementById('borderCheckbox2').checked,
+  document.getElementById('borderCheckbox3').checked,
+  document.getElementById('borderCheckbox4').checked
+];
+
+let urls = [
+  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
+  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
+  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
+  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
+];
+
+const redraw = (canvas) => {
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawRow(canvas, image1, 0, 0, false);
+  drawRow(canvas, image2, EDGE_LEN * COS_30, EDGE_LEN / 2, true);
+  drawRow(canvas, image3, 0, EDGE_LEN, false);
+  drawRow(canvas, image4, EDGE_LEN * COS_30, 3 * EDGE_LEN / 2, true);
+
+  drawFinishingTouches(canvas);
+  scaleDraw(canvas, scaledCanvas); 
+}
+
+const scaleDraw = (inCanvas, outCanvas) => {
+  const outCtx = outCanvas.getContext('2d');
+
+  outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height * ISOCELES_FACTOR);
+  outCtx.drawImage(inCanvas,
+    0, 0, inCanvas.width, inCanvas.height,
+    0, 0, outCanvas.width, outCanvas.height * ISOCELES_FACTOR);
+}
+
+const readURL = file => {
+    return new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = e => res(e.target.result);
+        reader.onerror = e => rej(e);
+        reader.readAsDataURL(file);
+    });
+};
+
+const changeImagePicker = async (event, image, urlIndex) => {
+    const file = event.target.files[0];
+    urls[urlIndex] = await readURL(file);
+    await drawToHexCanvas(image, urlIndex);
+    redraw(canvas);
+};
+
+const changeCheckboxes = () => {
+  checked = [
+    document.getElementById('borderCheckbox1').checked,
+    document.getElementById('borderCheckbox2').checked,
+    document.getElementById('borderCheckbox3').checked,
+    document.getElementById('borderCheckbox4').checked
+  ];
+
+  const loadingImages = [
+    drawToHexCanvas(image1, 0),
+    drawToHexCanvas(image2, 1),
+    drawToHexCanvas(image3, 2),
+    drawToHexCanvas(image4, 3)
+  ];
+
+  Promise.all(loadingImages).then(() => {
+    redraw(canvas);
+  });
+}
+
+const changeImagePicker1 = async event => changeImagePicker(event, image1, 0);
+const changeImagePicker2 = async event => changeImagePicker(event, image2, 1);
+const changeImagePicker3 = async event => changeImagePicker(event, image3, 2);
+const changeImagePicker4 = async event => changeImagePicker(event, image4, 3);
+
+const drawFinishingTouches = (canvas) => {
+  drawBottomLines(canvas);
+  drawTab(canvas, 6 * EDGE_LEN * COS_30, EDGE_LEN / 2);
+  drawTab(canvas, 6 * EDGE_LEN * COS_30, EDGE_LEN + EDGE_LEN / 2);
+}
+
+const drawDiamond = (ctx, x, y) => {
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.moveTo(x, EDGE_LEN / 2 + y);
+  ctx.lineTo(x + EDGE_LEN * COS_30, y);
+  ctx.lineTo(x + 2 * EDGE_LEN * COS_30, EDGE_LEN / 2 + y);
+  ctx.lineTo(x + EDGE_LEN * COS_30, EDGE_LEN + y);
+  ctx.lineTo(x, EDGE_LEN / 2 + y);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.clip();
+}
+
+const drawTab = (canvas, x, y) => {
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);  
+  ctx.lineTo(x + EDGE_LEN / 4, y);
+  ctx.lineTo(x + EDGE_LEN / 4, y + EDGE_LEN);
+  ctx.lineTo(x, y + EDGE_LEN);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);  
+  ctx.lineTo(x + EDGE_LEN / 4, y + EDGE_LEN / 4);
+  ctx.lineTo(x + EDGE_LEN / 4, y + 3 * EDGE_LEN / 4);
+  ctx.lineTo(x, y + EDGE_LEN);
+  ctx.stroke();
+};
+
+const drawBottomLines = (canvas) => {
+  const ctx = canvas.getContext('2d');
+
+  ctx.beginPath();
+  ctx.moveTo(0, 2.5 * EDGE_LEN);
+  ctx.lineTo(6 * EDGE_LEN * COS_30, 2.5 * EDGE_LEN);
+
+  for (let i = 0; i < 4; i++) {
+    ctx.moveTo((2 * i) * EDGE_LEN * COS_30, EDGE_LEN / 2);
+    ctx.lineTo((2 * i) * EDGE_LEN * COS_30, 2.5 * EDGE_LEN);
+    ctx.moveTo((2 * i + 1) * EDGE_LEN * COS_30, 0);
+    ctx.lineTo((2 * i + 1) * EDGE_LEN * COS_30, 2.5 * EDGE_LEN);
+  }
+  ctx.stroke();
+};
+
+const drawRow = (dest, src, x, y, rightRow) => {
+  const w = src.width;
+  const h = src.height;
+
+  const destCtx = dest.getContext('2d');
+
+  drawDiamond(destCtx, x, y);
+  destCtx.translate(h / 4 + x, w / 4 + y);
+  destCtx.rotate(-Math.PI / 2);
+  destCtx.drawImage(src, 0, 0, EDGE_LEN, EDGE_LEN * COS_30 * 2,
+                    -w / 4, -h / 4, EDGE_LEN , EDGE_LEN * COS_30 * 2)
+  destCtx.restore();
+
+  drawDiamond(destCtx, x + EDGE_LEN * COS_30 * 2, y);
+  destCtx.translate(x + 2 * EDGE_LEN * COS_30, EDGE_LEN / 2 + y);
+  destCtx.rotate(Math.PI / 6);
+  destCtx.drawImage(src, EDGE_LEN / 2, EDGE_LEN * COS_30, 1.5 * EDGE_LEN, EDGE_LEN * COS_30,
+    0, -EDGE_LEN * COS_30, EDGE_LEN * COS_30 * 2 * COS_30, EDGE_LEN * COS_30);
+  destCtx.restore();
+
+  drawDiamond(destCtx, x + EDGE_LEN * COS_30 * 4, y, rightRow);
+  destCtx.translate(x + 5.5 * EDGE_LEN * COS_30, EDGE_LEN / 2 - EDGE_LEN * COS_30 * COS_30 + y);
+  destCtx.rotate(5 * Math.PI / 6);
+  destCtx.drawImage(src, 2 * EDGE_LEN, EDGE_LEN * COS_30, -1.5 * EDGE_LEN, -EDGE_LEN * COS_30,
+    0, -EDGE_LEN * COS_30, EDGE_LEN * COS_30 * 2 * COS_30, EDGE_LEN * COS_30);
+  destCtx.restore();
+
+  if (rightRow) {
+    drawDiamond(destCtx, x - 2 * EDGE_LEN * COS_30, y);
+    destCtx.translate(EDGE_LEN * COS_30, EDGE_LEN / 2 + y);
+    destCtx.rotate(5 * Math.PI / 6);
+    destCtx.drawImage(src, 2 * EDGE_LEN, EDGE_LEN * COS_30, -1.5 * EDGE_LEN, -EDGE_LEN * COS_30,
+      0, 0, EDGE_LEN * COS_30 * 2 * COS_30, EDGE_LEN * COS_30);
+    destCtx.restore();
+  }
+}
+
+const calculateHexagonRatio = (image) => {
+  const w = image.width;
+  const h = image.height;
+  const a = h / w;
+
+  const p = 3 - Math.sqrt(3) * a;
+  const q = 2 * a + 2 * Math.sqrt(3);
+  const z = p / q;
+
+  const rh = Math.sqrt(3) - 2 * z;
+  const rw = 1 + 2 * z / Math.sqrt(3);
+
+  return [rw, rh];
+}
+
+const calculateFullRatio = (image) => {
+  const w = image.width;
+  const h = image.height;
+
+  const rw = w / EDGE_LEN;
+  const rh = h / (EDGE_LEN * COS_30);
+
+  return (rh > rw) ? [rw / rh, 1] : [1, rh / rw];
+}
+
+const drawToHexCanvas = (canvas, urlIndex) => {
+  return new Promise((resolve, reject) => {
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    canvas.width = 2 * EDGE_LEN;
+    canvas.height = 2 * EDGE_LEN * COS_30;
+    const border = checked[urlIndex];
+
+    const image = new Image();
+    image.src = urls[urlIndex];
+
+    image.onload = () => {
+      const [xx, yy] = border ? calculateHexagonRatio(image) : calculateFullRatio(image);
+
+      const sw = border ? xx * EDGE_LEN : xx * 2 * EDGE_LEN;
+      const sh = border ? yy * EDGE_LEN : yy * 2 * EDGE_LEN * COS_30;
+
+      const ox = (2 * EDGE_LEN  - sw) / 2;
+      const oy = (2 * EDGE_LEN * COS_30 - sh) / 2;
+
+      ctx.drawImage(image, 0, 0, image.width, image.height, ox, oy, sw, sh);
+      resolve();
+    }
+  });
+}
+
+const loadingImages = [
+  drawToHexCanvas(image1, 0),
+  drawToHexCanvas(image2, 1),
+  drawToHexCanvas(image3, 2),
+  drawToHexCanvas(image4, 3)
+];
+
+Promise.all(loadingImages).then(() => {
+  redraw(canvas);
+});
+
+</script>
+</html>
